@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Little Paradise Math Quiz — Control Center</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root{
+  --bg:#152420;
+  --bg-panel:#1D3128;
+  --bg-panel-raised:#24392F;
+  --line:#33493D;
+  --chalk:#ECE7D8;
+  --chalk-dim:#A9B8AE;
+  --accent:#F2C14E;
+  --accent-dim:#8a6f2a;
+  --good:#4FA97A;
+  --bad:#D9634A;
+  --t0:#C0392B;
+  --t1:#2E6FAA;
+  --t2:#2A9D8F;
+  --t3:#8B5CB0;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:transparent;color:var(--chalk);font-family:'Inter',sans-serif;}
+body{
+  background:
+    radial-gradient(circle at 15% 0%, rgba(242,193,78,0.05), transparent 40%),
+    var(--bg);
+  min-height:100vh;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px;}
+
+h1,h2,h3{font-family:'Oswald',sans-serif;letter-spacing:0.02em;margin:0;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);}
+
+/* ===== Header / Scoreboard ===== */
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.event-title{font-size:22px;font-weight:600;color:var(--chalk);}
+.event-title[contenteditable]:focus{outline:1px dashed var(--accent);}
+.reset-btn{background:none;border:1px solid var(--line);color:var(--chalk-dim);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 10px;border-radius:6px;cursor:pointer;}
+.reset-btn:hover{border-color:var(--bad);color:var(--bad);}
+
+.scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.team-card{background:var(--bg-panel);border-radius:var(--radius);padding:14px 14px 12px;border-top:4px solid var(--tc);position:relative;overflow:hidden;}
+.team-name{font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;text-transform:uppercase;background:none;border:none;color:var(--chalk);width:100%;padding:0;margin-bottom:6px;letter-spacing:0.03em;}
+.team-name:focus{outline:none;border-bottom:1px solid var(--accent);}
+.team-score{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;color:var(--chalk);line-height:1;}
+.team-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.pt-btns{display:flex;gap:4px;}
+.pt-btns button{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--bg-panel-raised);color:var(--chalk-dim);cursor:pointer;font-size:14px;line-height:1;}
+.pt-btns button:hover{border-color:var(--accent);color:var(--accent);}
+.comeback-btn{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 8px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--chalk-dim);cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;}
+.comeback-btn.available{border-color:var(--accent);color:var(--accent);}
+.comeback-btn.active{background:var(--accent);color:#241c07;border-color:var(--accent);font-weight:700;}
+.comeback-btn.used{opacity:0.35;cursor:not-allowed;}
+
+/* ===== Round tabs ===== */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;}
+.tab{flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg-panel);color:var(--chalk-dim);cursor:pointer;white-space:nowrap;}
+.tab b{color:var(--chalk);font-weight:700;}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#241c07;}
+.tab.active b{color:#241c07;}
+
+/* ===== Panel ===== */
+.panel{background:var(--bg-panel);border:1px solid var(--line);border-radius:14px;padding:20px;}
+.panel h2{font-size:20px;margin-bottom:4px;}
+.rules{color:var(--chalk-dim);font-size:13px;line-height:1.55;margin:8px 0 18px;padding:12px 14px;background:var(--bg-panel-raised);border-radius:8px;border-left:3px solid var(--accent-dim);}
+.rules ul{margin:4px 0 0;padding-left:18px;}
+
+/* Timer */
+.timer-box{display:flex;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+.timer-display{font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:700;background:#0F1C17;border:1px solid var(--line);border-radius:10px;padding:6px 22px;min-width:130px;text-align:center;color:var(--accent);}
+.timer-display.low{color:var(--bad);}
+.timer-controls button{font-family:'JetBrains Mono',monospace;font-size:12px;padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg-panel-raised);color:var(--chalk);cursor:pointer;margin-right:6px;}
+.timer-controls button.primary{background:var(--accent);border-color:var(--accent);color:#241c07;font-weight:700;}
+.timer-controls button:disabled{opacity:0.4;cursor:not-allowed;}
+.timer-presets{display:flex;gap:4px;flex-wrap:wrap;}
+.timer-presets button{font-size:11px;padding:5px 9px;}
+
+/* Question / answer block */
+.qa-block{background:var(--bg-panel-raised);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;}
+.qa-q{font-size:14px;line-height:1.5;margin-bottom:6px;}
+.qa-a{font-size:13px;color:var(--good);font-family:'JetBrains Mono',monospace;}
+.qa-meta{font-size:11px;color:var(--chalk-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em;}
+
+/* Round 2 visual image */
+.visual-frame{
+  background:#0F1C17;border:1px solid var(--line);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  min-height:220px;max-height:420px;overflow:hidden;margin-bottom:14px;
+}
+.visual-frame img{max-width:100%;max-height:420px;object-fit:contain;display:block;}
+.visual-frame.empty{color:var(--chalk-dim);font-size:13px;font-family:'JetBrains Mono',monospace;text-align:center;padding:20px;}
+
+/* Question grid (round 1) */
+.qgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px;}
+.qcell{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:var(--bg-panel-raised);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;cursor:pointer;color:var(--chalk);}
+.qcell:hover{border-color:var(--accent);}
+.qcell.closed{opacity:0.25;cursor:not-allowed;background:none;text-decoration:line-through;}
+.qcell.selected{border-color:var(--accent);background:rgba(242,193,78,0.15);color:var(--accent);}
+
+.turn-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:var(--bg-panel-raised);margin-bottom:16px;font-family:'Oswald',sans-serif;font-size:15px;}
+.dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;}
+
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.action-row button{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;}
+.btn-correct{background:var(--good);color:#0d1f16;}
+.btn-incorrect{background:var(--bad);color:#2b1109;}
+.btn-neutral{background:var(--bg-panel-raised);color:var(--chalk);border:1px solid var(--line) !important;}
+
+.team-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0;}
+.team-pick-btn{padding:10px;border-radius:8px;border:2px solid var(--tc);background:var(--bg-panel-raised);color:var(--chalk);cursor:pointer;font-family:'Oswald',sans-serif;font-size:13px;text-align:center;}
+.team-pick-btn.chosen{background:var(--tc);color:#fff;}
+
+.field-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.field-row input[type=number], .field-row input[type=text]{background:#0F1C17;border:1px solid var(--line);color:var(--chalk);border-radius:6px;padding:7px 10px;font-family:'JetBrains Mono',monospace;width:90px;}
+.field-row label{font-size:13px;color:var(--chalk-dim);min-width:120px;}
+
+table.score-table{width:100%;border-collapse:collapse;margin-top:10px;}
+table.score-table th,table.score-table td{padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left;}
+table.score-table th{color:var(--chalk-dim);font-family:'JetBrains Mono',monospace;font-weight:500;font-size:11px;text-transform:uppercase;}
+
+.mini-btn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 9px;border-radius:6px;border:1px solid var(--line);background:var(--bg-panel-raised);color:var(--chalk);cursor:pointer;}
+.mini-btn:hover{border-color:var(--accent);color:var(--accent);}
+.mini-btn.chosen{border-color:var(--accent);color:var(--accent);}
+
+.box-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.box-card{background:var(--bg-panel-raised);border:1px solid var(--line);border-radius:10px;padding:12px;}
+.box-card.picked{opacity:0.55;}
+.box-card input{width:100%;margin-bottom:6px;}
+
+.log-panel{margin-top:24px;}
+.log-list{max-height:180px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--chalk-dim);border-top:1px solid var(--line);padding-top:8px;}
+.log-list div{padding:3px 0;border-bottom:1px dashed rgba(255,255,255,0.05);}
+
+.bonus-note{font-size:12px;color:var(--chalk-dim);margin-top:8px;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+@media(max-width:720px){
+  .scoreboard{grid-template-columns:repeat(2,1fr);}
+  .qgrid{grid-template-columns:repeat(4,1fr);}
+  .box-grid{grid-template-columns:repeat(1,1fr);}
+  .team-pick{grid-template-columns:repeat(2,1fr);}
+}
+
+/* ===== Audience Display mode (?view=audience) — separate "aud-" prefixed
+   classes so they never collide with the control-center styles above ===== */
+.aud-wrap{display:flex;flex-direction:column;height:100vh;padding:24px;gap:20px;overflow:hidden;}
+.aud-scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.aud-team-card{background:var(--bg-panel);border-radius:14px;padding:16px 18px;border-top:6px solid var(--tc);text-align:center;}
+.aud-team-name{font-family:'Oswald',sans-serif;font-size:clamp(16px,2vw,22px);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}
+.aud-team-score{font-family:'JetBrains Mono',monospace;font-size:clamp(32px,5vw,56px);font-weight:700;line-height:1;}
+.aud-comeback-tag{display:inline-block;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em;}
+.aud-comeback-tag.active{background:var(--accent);color:#241c07;font-weight:700;}
+.aud-comeback-tag.used{color:var(--chalk-dim);border:1px solid var(--line);}
+.aud-stage{flex:1;background:var(--bg-panel);border:1px solid var(--line);border-radius:20px;padding:30px 40px;display:flex;flex-direction:column;min-height:0;}
+.aud-stage-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:14px;}
+.aud-round-title{font-size:clamp(24px,3.4vw,40px);font-family:'Oswald',sans-serif;}
+.aud-timer{font-family:'JetBrains Mono',monospace;font-size:clamp(40px,6vw,80px);font-weight:700;background:#0F1C17;border:1px solid var(--line);border-radius:14px;padding:6px 30px;color:var(--accent);}
+.aud-timer.low{color:var(--bad);}
+.aud-stage-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;justify-content:center;}
+.aud-question-text{font-size:clamp(22px,3vw,38px);line-height:1.4;text-align:center;padding:20px;}
+.aud-subtle{color:var(--chalk-dim);font-size:clamp(14px,1.6vw,18px);text-align:center;}
+.aud-visual-frame{background:#0F1C17;border:1px solid var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;flex:1;min-height:0;overflow:hidden;}
+.aud-visual-frame img{max-width:100%;max-height:100%;object-fit:contain;}
+.aud-qgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:10px;}
+.aud-qcell{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:var(--bg-panel-raised);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:clamp(14px,1.6vw,22px);}
+.aud-qcell.closed{opacity:0.25;text-decoration:line-through;}
+.aud-qcell.active{border-color:var(--accent);background:rgba(242,193,78,0.18);color:var(--accent);font-weight:700;}
+.aud-turn-line{text-align:center;font-family:'Oswald',sans-serif;font-size:clamp(16px,2vw,24px);margin-bottom:6px;}
+.aud-dot{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+.aud-box-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.aud-box-card{background:var(--bg-panel-raised);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
+.aud-box-card.picked{border-color:var(--accent);}
+.aud-box-label{font-family:'Oswald',sans-serif;font-size:clamp(16px,1.8vw,20px);margin-bottom:4px;}
+.aud-box-points{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;}
+.aud-status-line{text-align:center;color:var(--chalk-dim);font-size:16px;padding:40px;}
+.aud-list{display:flex;flex-direction:column;gap:12px;}
+.aud-list div{background:var(--bg-panel-raised);border-radius:10px;padding:14px 18px;font-size:clamp(16px,1.8vw,22px);}
+.open-audience-btn{background:var(--accent);border:none;color:#241c07;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:7px 12px;border-radius:6px;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+  
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 1 — CONFIG
+   Every number that controls scoring or timers lives here. Change values
+   in this block only; nothing else in the file needs to be touched to
+   retune points or durations.
+   ══════════════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  teamNames: ['House 1', 'House 2', 'House 3', 'House 4'],
+
+  round1: { primaryPoints: 10, passPoints: 5, primaryTime: 45, passTime: 30 },
+  round2: { correctPoints: 10, incorrectPoints: -5, showTime: 15, writeTime: 90 },
+  round3: { raceTime: 180, placePoints: [40, 30, 20, 10] },
+  round4: { exactPoints: 20, closePoints: 10, timePerQuestion: 60 },
+  round5: { correctPoints: 5, perfectBonus: 20, battleTime: 60, maxCorrect: 10 },
+  round6: { timerPresets: [30, 45, 60] },
+  round7: { bonusMultiplier: 1.5 },
+  round8: { placePoints: [40, 30, 20, 10] }
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 2 — QUESTION BANK
+   Put your real questions here. Each round has its own array/object
+   shape — see the comment above each one for the exact fields it needs
+   and a filled-in example. The quizmaster view shows the question text
+   automatically and reveals the answer on tap, so you never have to
+   read this off a separate sheet.
+   ══════════════════════════════════════════════════════════════════════ */
+const QUESTIONS = {
+
+  // ROUND 1 — General Round. Exactly 20 entries, one per grid number (1–20).
+  // { question: "...", answer: "..." }
+  // Example:
+  //   { question: "What is 15% of 200?", answer: "30" }
+  round1: [
+    { question: "Q1: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q2: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q3: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q4: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q5: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q6: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q7: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q8: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q9: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q10: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q11: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q12: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q13: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q14: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q15: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q16: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q17: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q18: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q19: Sample question — replace me", answer: "Sample answer" },
+    { question: "Q20: Sample question — replace me", answer: "Sample answer" }
+  ],
+
+  // ROUND 2 — Memory & Math. Exactly 4 visuals, each with 3 questions.
+  // { title, description, image, questions: [{question, answer} x3] }
+  //
+  // "image" is what actually gets displayed on screen during the 15s
+  // memorize window. It accepts EITHER:
+  //   (a) a normal hosted URL, e.g. "https://example.com/pie-chart.png"
+  //   (b) a base64 data URI, e.g. "data:image/png;base64,iVBORw0KG..."
+  // Leave it as "" (empty string) if you don't have an image yet — the
+  // app will just show a placeholder reminding you to add one.
+  // "description" is a quizmaster-only note (not shown as the visual
+  // itself) — handy if the image is abstract or you want a reminder.
+  //
+  // Example:
+  //   {
+  //     title: "Visual 1 — Fraction Pie Chart",
+  //     description: "Pie chart split into 8ths, 3 shaded.",
+  //     image: "https://example.com/pie-chart.png",
+  //     questions: [
+  //       { question: "What fraction of the pie is shaded?", answer: "3/8" },
+  //       { question: "What percentage is unshaded?", answer: "62.5%" },
+  //       { question: "If the pie had 16 slices instead, how many would be shaded?", answer: "6" }
+  //     ]
+  //   }
+  round2: [
+    { title: "Visual 1", description: "Replace with what this visual shows", image: "", questions: [
+      { question: "Question A", answer: "Answer A" },
+      { question: "Question B", answer: "Answer B" },
+      { question: "Question C", answer: "Answer C" }
+    ]},
+    { title: "Visual 2", description: "Replace with what this visual shows", image: "", questions: [
+      { question: "Question A", answer: "Answer A" },
+      { question: "Question B", answer: "Answer B" },
+      { question: "Question C", answer: "Answer C" }
+    ]},
+    { title: "Visual 3", description: "Replace with what this visual shows", image: "", questions: [
+      { question: "Question A", answer: "Answer A" },
+      { question: "Question B", answer: "Answer B" },
+      { question: "Question C", answer: "Answer C" }
+    ]},
+    { title: "Visual 4", description: "Replace with what this visual shows", image: "", questions: [
+      { question: "Question A", answer: "Answer A" },
+      { question: "Question B", answer: "Answer B" },
+      { question: "Question C", answer: "Answer C" }
+    ]}
+  ],
+
+  // ROUND 3 — Crack the Code. 3 sequential levels (teams race through all 3).
+  // { level, question, answer }
+  // Example:
+  //   { level: 1, question: "Decode: 2, 6, 12, 20, __", answer: "30 (n(n+1))" }
+  round3: [
+    { level: 1, question: "Level 1 — replace me", answer: "Answer 1" },
+    { level: 2, question: "Level 2 — replace me", answer: "Answer 2" },
+    { level: 3, question: "Level 3 — replace me", answer: "Answer 3" }
+  ],
+
+  // ROUND 4 — Hit the Target. Exactly 4 questions.
+  // { numbers: [...6 numbers], target, sampleSolution }
+  // Example:
+  //   { numbers: [25, 8, 3, 100, 2, 6], target: 247,
+  //     sampleSolution: "100 + 25×6 - 3 = 247" }
+  round4: [
+    { numbers: [0,0,0,0,0,0], target: 0, sampleSolution: "Replace with numbers/target/solution" },
+    { numbers: [0,0,0,0,0,0], target: 0, sampleSolution: "Replace with numbers/target/solution" },
+    { numbers: [0,0,0,0,0,0], target: 0, sampleSolution: "Replace with numbers/target/solution" },
+    { numbers: [0,0,0,0,0,0], target: 0, sampleSolution: "Replace with numbers/target/solution" }
+  ],
+
+  // ROUND 5 — 60 Seconds Battle. One shared rapid-fire pool (add as many as
+  // you like — 15–20 is plenty per team since captains rarely get through
+  // all of them in 60s). Quizmaster reads down the list in order.
+  // { question, answer }
+  round5: [
+    { question: "Rapid Q1 — replace me", answer: "Answer 1" },
+    { question: "Rapid Q2 — replace me", answer: "Answer 2" },
+    { question: "Rapid Q3 — replace me", answer: "Answer 3" },
+    { question: "Rapid Q4 — replace me", answer: "Answer 4" },
+    { question: "Rapid Q5 — replace me", answer: "Answer 5" }
+  ],
+
+  // ROUND 6 — Mystery Box. Exactly 6 boxes.
+  // { label, points, question, answer }
+  // Example:
+  //   { label: "Box 1 — Algebra", points: 30,
+  //     question: "Solve for x: 3x + 7 = 22", answer: "x = 5" }
+  round6: [
+    { label: "Box 1", points: 30, question: "Replace me", answer: "Replace me" },
+    { label: "Box 2", points: 30, question: "Replace me", answer: "Replace me" },
+    { label: "Box 3", points: 30, question: "Replace me", answer: "Replace me" },
+    { label: "Box 4", points: 30, question: "Replace me", answer: "Replace me" },
+    { label: "Box 5", points: 30, question: "Replace me", answer: "Replace me" },
+    { label: "Box 6", points: 30, question: "Replace me", answer: "Replace me" }
+  ],
+
+  // ROUND 7 — Math Auction. Exactly 4 questions.
+  // { question, answer }
+  round7: [
+    { question: "Auction Q1 — replace me", answer: "Answer 1" },
+    { question: "Auction Q2 — replace me", answer: "Answer 2" },
+    { question: "Auction Q3 — replace me", answer: "Answer 3" },
+    { question: "Auction Q4 — replace me", answer: "Answer 4" }
+  ],
+
+  // ROUND 8 — Math Relay. Exactly 4 legs (one per team member).
+  // { leg, question, answer }
+  round8: [
+    { leg: 1, question: "Leg 1 — replace me", answer: "Answer 1" },
+    { leg: 2, question: "Leg 2 — replace me", answer: "Answer 2" },
+    { leg: 3, question: "Leg 3 — replace me", answer: "Answer 3" },
+    { leg: 4, question: "Leg 4 — replace me", answer: "Answer 4" }
+  ]
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 2b — FIREBASE CONFIG
+   Paste the config object Firebase gave you when you registered your Web
+   app (Project settings → your app → SDK setup and configuration).
+   This is what makes the control center and the audience display sync
+   live across two real devices/tabs over the internet.
+   ══════════════════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD7TBu_OYdFPfCbYtJC0hZkz5X2a8WYLHA",
+  authDomain: "quiz-e238c.firebaseapp.com",
+  databaseURL: "https://quiz-e238c-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "quiz-e238c",
+  storageBucket: "quiz-e238c.firebasestorage.app",
+  messagingSenderId: "44882000613",
+  appId: "1:44882000613:web:03769182aa6612e759320c"
+};
+const FIREBASE_READY = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('PASTE_');
+let db = null;
+if(FIREBASE_READY){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+} else {
+  console.warn('Firebase config not filled in yet — live sync is disabled until you paste your project keys above.');
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 3 — STATE
+   Live event state. Don't hand-edit this; it's rebuilt from CONFIG on
+   load/reset and mutated by the functions below as the event runs.
+   ══════════════════════════════════════════════════════════════════════ */
+const TEAM_COLORS = ['var(--t0)','var(--t1)','var(--t2)','var(--t3)'];
+const STORAGE_KEY = 'lp-math-quiz-state-v2';       // this device's private autosave (localStorage)
+const PUBLIC_KEY = 'lp-math-quiz-public-v2';        // shared Firebase path the audience display listens to
+
+function freshState(){
+  return {
+    eventTitle: "Little Paradise Math Quiz",
+    teams: CONFIG.teamNames.map(name => ({ name, score: 0, comeback: 'available' })),
+    activeRound: 1,
+    log: [],
+    timer: { seconds: 0, running: false, total: 0, startedAt: null },
+    revealed: {}, // answer-reveal toggles, keyed by string id
+    r1: { questions: Array.from({length:20},()=>({status:'open'})), baseOrder:[0,1,2,3], pointer:0, direction:1, activeQ:null, phase:null, passTeam:null },
+    r2: { visual: 1 },
+    r3: { finishOrder: [] },
+    r4: { qnum: 1, results: {} },
+    r5: { activeTeam: null, counts: {} },
+    r6: { boxes: QUESTIONS.round6.map(b => ({ picked:false, team:null })) },
+    r7: { bonusApplied:false, qnum:1, bids:[0,0,0,0] },
+    r8: { finishOrder: [] }
+  };
+}
+let state = freshState();
+let timerInterval = null;
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 4 — SCORING ENGINE
+   Points, comeback-card doubling, and the log. All rounds funnel scoring
+   through awardPoints() so the comeback card and audit log work
+   everywhere consistently.
+   ══════════════════════════════════════════════════════════════════════ */
+function log(text){
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  state.log.unshift({time, text});
+  if(state.log.length > 200) state.log.pop();
+}
+
+function awardPoints(teamIdx, base, reason){
+  const t = state.teams[teamIdx];
+  const applied = t.comeback === 'active' ? base*2 : base;
+  t.score += applied;
+  let note = `${t.name}: ${applied>=0?'+':''}${applied} (${reason})`;
+  if(t.comeback === 'active'){
+    note += ' [comeback card used]';
+    t.comeback = 'used';
+  }
+  log(note);
+  save();
+  render();
+}
+
+function manualAdjust(teamIdx, delta){
+  state.teams[teamIdx].score += delta;
+  log(`${state.teams[teamIdx].name}: manual ${delta>=0?'+':''}${delta}`);
+  save();
+  render();
+}
+
+function toggleComeback(teamIdx){
+  const t = state.teams[teamIdx];
+  if(t.comeback === 'used') return;
+  if(t.comeback === 'available'){
+    state.teams.forEach((tm,i)=>{ if(i!==teamIdx && tm.comeback==='active') tm.comeback='available'; });
+    t.comeback = 'active';
+  } else {
+    t.comeback = 'available';
+  }
+  save();
+  render();
+}
+
+function toggleReveal(id){
+  state.revealed[id] = !state.revealed[id];
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 5 — TIMER
+   `startedAt` (epoch ms) + the seconds value at that moment let any other
+   screen (like the Audience Display) compute the live countdown itself
+   from a single synced snapshot, instead of needing a write every second.
+   ══════════════════════════════════════════════════════════════════════ */
+function setTimer(seconds){
+  clearInterval(timerInterval);
+  state.timer = {seconds, total:seconds, running:false, startedAt:null};
+  save();
+  render();
+}
+function startTimer(){
+  if(state.timer.seconds <= 0) return;
+  state.timer.running = true;
+  state.timer.startedAt = Date.now();
+  const baseline = state.timer.seconds;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    const elapsed = Math.floor((Date.now() - state.timer.startedAt)/1000);
+    state.timer.seconds = Math.max(0, baseline - elapsed);
+    if(state.timer.seconds <= 0){
+      state.timer.running = false;
+      state.timer.startedAt = null;
+      clearInterval(timerInterval);
+      beep();
+      save();
+    }
+    renderTimerOnly();
+  },250);
+  save();
+  render();
+}
+function pauseTimer(){
+  state.timer.running = false;
+  state.timer.startedAt = null;
+  clearInterval(timerInterval);
+  save();
+  render();
+}
+function beep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    for(let i=0;i<3;i++){
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.15, ctx.currentTime + i*0.35);
+      o.start(ctx.currentTime + i*0.35);
+      o.stop(ctx.currentTime + i*0.35 + 0.25);
+    }
+  }catch(e){}
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 6 — PERSISTENCE
+   Two different stores, two different jobs:
+   1. localStorage — PRIVATE to this device/browser, so an accidental
+      refresh mid-event doesn't lose the scoreboard. Never leaves the
+      machine it's running on.
+   2. Firebase Realtime Database — SHARED, answer-free snapshot that any
+      device running this same page in ?view=audience mode listens to
+      live. See computePublicSnapshot() in Section 6b for exactly what
+      is (and isn't) included — answers are never part of it.
+   ══════════════════════════════════════════════════════════════════════ */
+let saveTimeout = null;
+function save(){
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(()=>{
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({...state, timer:{seconds:0,running:false,total:0,startedAt:null}}));
+    }catch(e){ console.error('local save failed', e); }
+    if(db){
+      db.ref(PUBLIC_KEY).set(computePublicSnapshot()).catch(e=>console.error('firebase sync failed', e));
+    }
+  }, 400);
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state = {...freshState(), ...parsed, timer:{seconds:0,running:false,total:0,startedAt:null}};
+    }
+  }catch(e){ /* no saved state yet */ }
+  render();
+}
+function resetAll(){
+  if(!confirm('Reset the entire event? All scores and progress will be cleared.')) return;
+  clearInterval(timerInterval);
+  const title = state.eventTitle;
+  state = freshState();
+  state.eventTitle = title;
+  log('Event reset.');
+  save();
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 6b — PUBLIC SNAPSHOT (for the Audience Display)
+   Builds the answer-free object that gets written to shared storage.
+   If you add a new round or field to a round's state, extend the
+   matching case here so the audience screen picks it up — never add
+   an "answer" field to anything returned from this function.
+   ══════════════════════════════════════════════════════════════════════ */
+function computePublicSnapshot(){
+  const base = {
+    eventTitle: state.eventTitle,
+    activeRound: state.activeRound,
+    roundName: ROUND_NAMES[state.activeRound],
+    teams: state.teams.map(t => ({ name:t.name, score:t.score, comeback:t.comeback })),
+    timer: { ...state.timer },
+    updatedAt: Date.now()
+  };
+  switch(state.activeRound){
+    case 1: {
+      const r = state.r1;
+      base.content = {
+        selectingTeam: r1SelectingTeam(),
+        phase: r.phase,
+        passTeam: r.passTeam,
+        grid: r.questions.map((q,i)=> i===r.activeQ ? 'active' : q.status),
+        questionText: r.activeQ!==null ? (QUESTIONS.round1[r.activeQ]?.question || '') : null
+      };
+      break;
+    }
+    case 2: {
+      const v = QUESTIONS.round2[state.r2.visual-1];
+      base.content = { visual: state.r2.visual, of: QUESTIONS.round2.length, title: v.title, image: v.image, questions: v.questions.map(q=>q.question) };
+      break;
+    }
+    case 3: {
+      base.content = { levels: QUESTIONS.round3.map(lv => ({ level: lv.level, question: lv.question })) };
+      break;
+    }
+    case 4: {
+      const qd = QUESTIONS.round4[state.r4.qnum-1];
+      base.content = { qnum: state.r4.qnum, numbers: qd.numbers, target: qd.target };
+      break;
+    }
+    case 5: {
+      base.content = { activeTeam: state.r5.activeTeam, count: state.r5.activeTeam!==null ? (state.r5.counts[state.r5.activeTeam]||0) : 0, max: CONFIG.round5.maxCorrect };
+      break;
+    }
+    case 6: {
+      base.content = { boxes: QUESTIONS.round6.map((b,i)=>{
+        const picked = state.r6.boxes[i];
+        return { label:b.label, points:b.points, picked:picked.picked, team:picked.team, question: picked.picked ? b.question : null };
+      })};
+      break;
+    }
+    case 7: {
+      const qd = QUESTIONS.round7[state.r7.qnum-1];
+      base.content = { qnum: state.r7.qnum, question: qd.question, bonusApplied: state.r7.bonusApplied, bids: state.r7.bids };
+      break;
+    }
+    case 8: {
+      base.content = { legs: QUESTIONS.round8.map(l => ({ leg:l.leg, question:l.question })) };
+      break;
+    }
+  }
+  return base;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 7 — ROUND LOGIC
+   One block per round: the rules-specific behavior. Each block is
+   self-contained, so you can change how a round scores without touching
+   any other round.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* --- Round 1: General Round --- */
+function r1CurrentOrder(){
+  const o = state.r1.baseOrder;
+  return state.r1.direction === 1 ? o : [...o].reverse();
+}
+function r1SelectingTeam(){ return r1CurrentOrder()[state.r1.pointer]; }
+function r1Advance(){
+  state.r1.pointer++;
+  if(state.r1.pointer >= 4){ state.r1.pointer = 0; state.r1.direction *= -1; }
+  state.r1.activeQ = null;
+  state.r1.phase = null;
+}
+function r1Pick(qIdx){
+  if(state.r1.questions[qIdx].status !== 'open') return;
+  state.r1.activeQ = qIdx;
+  state.r1.phase = 'primary';
+  setTimer(CONFIG.round1.primaryTime);
+  log(`Q${qIdx+1} selected by ${state.teams[r1SelectingTeam()].name}`);
+  render();
+}
+function r1Resolve(correct){
+  const q = state.r1.activeQ;
+  const team = r1SelectingTeam();
+  if(state.r1.phase === 'primary'){
+    if(correct){
+      awardPoints(team, CONFIG.round1.primaryPoints, `Round 1, Q${q+1} correct`);
+      state.r1.questions[q].status = 'closed';
+      r1Advance();
+      setTimer(0);
+    } else {
+      state.r1.phase = 'pass-select';
+      setTimer(0);
+    }
+  } else if(state.r1.phase === 'passed'){
+    if(correct){
+      awardPoints(state.r1.passTeam, CONFIG.round1.passPoints, `Round 1, Q${q+1} passed-correct`);
+    } else {
+      log(`Q${q+1}: passed answer incorrect, no points awarded.`);
+    }
+    state.r1.questions[q].status = 'closed';
+    r1Advance();
+    setTimer(0);
+  }
+  save();
+  render();
+}
+function r1SelectPassTeam(teamIdx){
+  state.r1.passTeam = teamIdx;
+  state.r1.phase = 'passed';
+  setTimer(CONFIG.round1.passTime);
+  log(`Q${state.r1.activeQ+1} passed to ${state.teams[teamIdx].name}`);
+  render();
+}
+
+/* --- Round 4: Hit the Target --- */
+function r4Record(teamIdx, result){
+  const q = state.r4.qnum;
+  if(!state.r4.results[q]) state.r4.results[q] = {};
+  if(state.r4.results[q][teamIdx] === result) return;
+  state.r4.results[q][teamIdx] = result;
+  if(result === 'exact') awardPoints(teamIdx, CONFIG.round4.exactPoints, `Round 4 Q${q} exact hit`);
+  else if(result === 'close') awardPoints(teamIdx, CONFIG.round4.closePoints, `Round 4 Q${q} within ±5`);
+  else { log(`${state.teams[teamIdx].name}: Round 4 Q${q} no points.`); render(); }
+}
+
+/* --- Round 5: 60 Seconds Battle --- */
+function r5Correct(){
+  const t = state.r5.activeTeam;
+  if(t===null) return;
+  if(!state.r5.counts[t]) state.r5.counts[t]=0;
+  if(state.r5.counts[t] >= CONFIG.round5.maxCorrect) return;
+  state.r5.counts[t]++;
+  awardPoints(t, CONFIG.round5.correctPoints, `Round 5 correct (#${state.r5.counts[t]})`);
+  if(state.r5.counts[t] === CONFIG.round5.maxCorrect){
+    awardPoints(t, CONFIG.round5.perfectBonus, 'Round 5 perfect bonus');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 8 — RENDER: SHARED LAYOUT (topbar, scoreboard, tabs, timer, log)
+   ══════════════════════════════════════════════════════════════════════ */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    ${renderTopbar()}
+    ${renderScoreboard()}
+    ${renderTabs()}
+    <div class="panel">${renderRound()}</div>
+    ${renderLog()}
+  `;
+  bindGlobalEvents();
+}
+
+function renderTimerOnly(){
+  const el = document.getElementById('timerDisplay');
+  if(el){
+    el.textContent = fmtTime(state.timer.seconds);
+    el.classList.toggle('low', state.timer.seconds<=10 && state.timer.seconds>0);
+  }
+  const startBtn = document.getElementById('timerStartBtn');
+  if(startBtn) startBtn.disabled = state.timer.running || state.timer.seconds<=0;
+}
+function fmtTime(s){ const m=Math.floor(s/60), sec=s%60; return `${m}:${sec.toString().padStart(2,'0')}`; }
+
+function renderTopbar(){
+  return `
+  ${!FIREBASE_READY ? `<div style="background:#3a2a12;border:1px solid var(--accent-dim);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px;">
+    ⚠ Firebase not configured — the Audience Display won't sync until you paste your project's config into FIREBASE_CONFIG near the top of the script.
+  </div>` : ''}
+  <div class="topbar">
+    <div>
+      <div class="eyebrow">Grades 6–9 · Quizmaster Control Center</div>
+      <div class="event-title" contenteditable="true" id="eventTitle">${escapeHtml(state.eventTitle)}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="open-audience-btn" id="openAudienceBtn">🖥 Open Audience Display</button>
+      <button class="reset-btn" id="resetBtn">Reset event</button>
+    </div>
+  </div>`;
+}
+
+function renderScoreboard(){
+  return `<div class="scoreboard">
+    ${state.teams.map((t,i)=>`
+      <div class="team-card" style="--tc:${TEAM_COLORS[i]}">
+        <input class="team-name" id="teamName${i}" value="${escapeHtml(t.name)}" />
+        <div class="team-score">${t.score}</div>
+        <div class="team-row">
+          <div class="pt-btns">
+            <button data-adjust="${i}:-5">−5</button>
+            <button data-adjust="${i}:-1">−1</button>
+            <button data-adjust="${i}:1">+1</button>
+            <button data-adjust="${i}:5">+5</button>
+          </div>
+          <button class="comeback-btn ${t.comeback}" data-comeback="${i}" ${t.comeback==='used'?'disabled':''}>
+            ${t.comeback==='active' ? 'Comeback ON' : t.comeback==='used' ? 'Used' : 'Comeback'}
+          </button>
+        </div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+const ROUND_NAMES = ['', 'General Round','Memory & Math','Crack the Code','Hit the Target','60s Battle','Mystery Box','Math Auction','Math Relay'];
+function renderTabs(){
+  return `<div class="tabs">
+    ${ROUND_NAMES.slice(1).map((n,idx)=>{
+      const r = idx+1;
+      return `<div class="tab ${state.activeRound===r?'active':''}" data-round="${r}"><b>R${r}</b> ${n}</div>`;
+    }).join('')}
+  </div>`;
+}
+
+function teamPickHtml(selectedIdx, dataAttr){
+  return `<div class="team-pick">
+    ${state.teams.map((t,i)=>`
+      <button class="team-pick-btn ${selectedIdx===i?'chosen':''}" style="--tc:${TEAM_COLORS[i]}" data-${dataAttr}="${i}">${escapeHtml(t.name)}</button>
+    `).join('')}
+  </div>`;
+}
+
+function timerHtml(presets){
+  return `<div class="timer-box">
+    <div class="timer-display ${state.timer.seconds<=10 && state.timer.seconds>0?'low':''}" id="timerDisplay">${fmtTime(state.timer.seconds)}</div>
+    <div class="timer-controls">
+      <button class="primary" id="timerStartBtn" ${state.timer.running||state.timer.seconds<=0?'disabled':''}>▶ Start</button>
+      <button id="timerPauseBtn">⏸ Pause</button>
+    </div>
+    <div class="timer-presets">
+      ${presets.map(p=>`<button class="mini-btn" data-preset="${p}">${p}s</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+// Reusable question/answer block. `id` must be unique across the whole app.
+function qaBlock(id, questionText, answerText){
+  const revealed = !!state.revealed[id];
+  return `<div class="qa-block">
+    <div class="qa-q">${escapeHtml(questionText)}</div>
+    ${revealed
+      ? `<div class="qa-a">Answer: ${escapeHtml(answerText)}</div><button class="mini-btn" data-reveal="${id}" style="margin-top:6px;">Hide answer</button>`
+      : `<button class="mini-btn" data-reveal="${id}">Show answer</button>`}
+  </div>`;
+}
+
+function renderLog(){
+  return `<div class="log-panel">
+    <h3 style="font-size:13px;color:var(--chalk-dim);text-transform:uppercase;letter-spacing:0.06em;">Score log</h3>
+    <div class="log-list">
+      ${state.log.length ? state.log.map(l=>`<div>${l.time} — ${escapeHtml(l.text)}</div>`).join('') : '<div>No events yet.</div>'}
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s){
+  return (s===undefined||s===null?'':s).toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 9 — RENDER: PER-ROUND VIEWS
+   ══════════════════════════════════════════════════════════════════════ */
+function renderRound(){
+  switch(state.activeRound){
+    case 1: return renderRound1();
+    case 2: return renderRound2();
+    case 3: return renderRound3();
+    case 4: return renderRound4();
+    case 5: return renderRound5();
+    case 6: return renderRound6();
+    case 7: return renderRound7();
+    case 8: return renderRound8();
+    default: return '';
+  }
+}
+
+function renderRound1(){
+  const r = state.r1;
+  const openLeft = r.questions.filter(q=>q.status==='open').length;
+  const bank = QUESTIONS.round1;
+  let body = '';
+  if(r.activeQ===null){
+    body = `<p style="color:var(--chalk-dim);font-size:13px;">Select an open question below for the team on turn.</p>`;
+  } else {
+    const q = bank[r.activeQ] || { question:'(no question configured)', answer:'' };
+    if(r.phase==='primary'){
+      body = qaBlock('r1-'+r.activeQ, q.question, q.answer) + `<div class="action-row">
+        <button class="btn-correct" data-r1resolve="1">Correct (+${CONFIG.round1.primaryPoints})</button>
+        <button class="btn-incorrect" data-r1resolve="0">Wrong / Time up → Pass</button>
+      </div>`;
+    } else if(r.phase==='pass-select'){
+      body = `<p style="font-size:13px;color:var(--chalk-dim);margin-bottom:6px;">Pick the team receiving the pass (${CONFIG.round1.passTime}s):</p>
+        ${teamPickHtml(null, 'r1pass')}`;
+    } else if(r.phase==='passed'){
+      body = qaBlock('r1-pass-'+r.activeQ, q.question, q.answer) + `<div class="action-row">
+        <button class="btn-correct" data-r1resolve="1">Correct (+${CONFIG.round1.passPoints})</button>
+        <button class="btn-incorrect" data-r1resolve="0">Incorrect</button>
+      </div>`;
+    }
+  }
+  const selTeam = r1SelectingTeam();
+  return `
+    <div class="eyebrow">Round 1 · 20 × ${CONFIG.round1.primaryPoints} = ${20*CONFIG.round1.primaryPoints} pts</div>
+    <h2>General Round</h2>
+    <div class="rules"><ul>
+      <li>Teams pick alternately clockwise, then anticlockwise next cycle.</li>
+      <li>Selector gets ${CONFIG.round1.primaryTime}s for ${CONFIG.round1.primaryPoints} pts; a passed question gives the next team ${CONFIG.round1.passTime}s for ${CONFIG.round1.passPoints} pts.</li>
+    </ul></div>
+    <div class="turn-banner"><span class="dot" style="background:${TEAM_COLORS[selTeam]}"></span>
+      On turn: <b style="color:${TEAM_COLORS[selTeam]}">${escapeHtml(state.teams[selTeam].name)}</b>
+      &nbsp;·&nbsp; ${openLeft} question${openLeft!==1?'s':''} left
+    </div>
+    ${timerHtml([CONFIG.round1.primaryTime, CONFIG.round1.passTime])}
+    ${body}
+    <div class="qgrid" style="margin-top:18px;">
+      ${r.questions.map((q,i)=>`
+        <div class="qcell ${q.status==='closed'?'closed':''} ${r.activeQ===i?'selected':''}" data-r1pick="${i}">${i+1}</div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderRound2(){
+  const idx = state.r2.visual - 1;
+  const v = QUESTIONS.round2[idx];
+  return `
+    <div class="eyebrow">Round 2 · 4 visuals × 3 questions</div>
+    <h2>Memory & Mathematics</h2>
+    <div class="rules"><ul>
+      <li>Show the visual ${CONFIG.round2.showTime}s (no talking/writing), then ${CONFIG.round2.writeTime}s to write the 3 answers.</li>
+      <li>+${CONFIG.round2.correctPoints} per correct answer, ${CONFIG.round2.incorrectPoints} per incorrect.</li>
+    </ul></div>
+    <div class="field-row"><label>Current visual</label>
+      <button class="mini-btn" data-r2visual="-1">◀</button>
+      <b style="min-width:20px;text-align:center;display:inline-block;">${state.r2.visual}</b>
+      <button class="mini-btn" data-r2visual="1">▶</button>
+      <span style="color:var(--chalk-dim);font-size:12px;">of ${QUESTIONS.round2.length}</span>
+    </div>
+    ${timerHtml([CONFIG.round2.showTime, CONFIG.round2.writeTime])}
+    ${v.image
+      ? `<div class="visual-frame"><img src="${escapeHtml(v.image)}" alt="${escapeHtml(v.title)}"></div>`
+      : `<div class="visual-frame empty">No image set for this visual yet.<br>Add a URL or base64 string to QUESTIONS.round2[${idx}].image</div>`}
+    <div class="qa-block">
+      <div class="qa-meta">${escapeHtml(v.title)}</div>
+      <div class="qa-q">${escapeHtml(v.description)}</div>
+    </div>
+    ${v.questions.map((q,qi)=>qaBlock(`r2-${idx}-${qi}`, q.question, q.answer)).join('')}
+    <p style="font-size:13px;color:var(--chalk-dim);margin:10px 0 4px;">Score each team's answers for this visual:</p>
+    ${state.teams.map((t,i)=>`
+      <div class="field-row">
+        <label style="color:${TEAM_COLORS[i]}">${escapeHtml(t.name)}</label>
+        <button class="mini-btn" data-r2score="${i}:1">+${CONFIG.round2.correctPoints} correct</button>
+        <button class="mini-btn" data-r2score="${i}:-1">${CONFIG.round2.incorrectPoints} incorrect</button>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderRound3(){
+  const r = state.r3;
+  const placeLabel = ['🥇 1st','🥈 2nd','🥉 3rd','4th'];
+  return `
+    <div class="eyebrow">Round 3 · Race, ${CONFIG.round3.raceTime/60} minutes</div>
+    <h2>Crack the Code</h2>
+    <div class="rules"><ul>
+      <li>3 sequential levels; all teams race simultaneously.</li>
+      <li>Finish order: ${CONFIG.round3.placePoints.map((p,i)=>placeLabel[i]+' +'+p).join(', ')}.</li>
+    </ul></div>
+    ${timerHtml([CONFIG.round3.raceTime])}
+    ${QUESTIONS.round3.map(lv => qaBlock('r3-'+lv.level, `Level ${lv.level}: ${lv.question}`, lv.answer)).join('')}
+    <p style="font-size:13px;color:var(--chalk-dim);margin:10px 0 4px;">Tap teams in the order they finish:</p>
+    <div class="team-pick">
+      ${state.teams.map((t,i)=>{
+        const place = r.finishOrder.indexOf(i);
+        return `<button class="team-pick-btn ${place>-1?'chosen':''}" style="--tc:${TEAM_COLORS[i]}" data-r3pick="${i}">
+          ${escapeHtml(t.name)}${place>-1?`<br><small>${placeLabel[place]} (+${CONFIG.round3.placePoints[place]})</small>`:''}
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="action-row"><button class="btn-neutral" data-r3clear="1">Clear order</button></div>
+  `;
+}
+
+function renderRound4(){
+  const q = state.r4.qnum;
+  const qd = QUESTIONS.round4[q-1];
+  const results = state.r4.results[q] || {};
+  return `
+    <div class="eyebrow">Round 4 · 4 questions × ${CONFIG.round4.exactPoints} pts</div>
+    <h2>Hit the Target</h2>
+    <div class="rules"><ul>
+      <li>6 numbers + a target; combine with + − × ÷, each number used at most once.</li>
+      <li>${CONFIG.round4.timePerQuestion}s per question. Exact hit +${CONFIG.round4.exactPoints}, within ±5 +${CONFIG.round4.closePoints}.</li>
+    </ul></div>
+    <div class="field-row"><label>Question</label>
+      <button class="mini-btn" data-r4q="-1">◀</button>
+      <b style="min-width:20px;text-align:center;display:inline-block;">${q}</b>
+      <button class="mini-btn" data-r4q="1">▶</button>
+      <span style="color:var(--chalk-dim);font-size:12px;">of 4</span>
+    </div>
+    ${timerHtml([CONFIG.round4.timePerQuestion])}
+    <div class="qa-block">
+      <div class="qa-q">Numbers: <b>${qd.numbers.join(', ')}</b> &nbsp;→&nbsp; Target: <b>${qd.target}</b></div>
+    </div>
+    ${qaBlock('r4-'+q, 'Sample solution', qd.sampleSolution)}
+    <table class="score-table">
+      <tr><th>Team</th><th>Exact (+${CONFIG.round4.exactPoints})</th><th>Within ±5 (+${CONFIG.round4.closePoints})</th><th>Miss</th></tr>
+      ${state.teams.map((t,i)=>`
+        <tr>
+          <td style="color:${TEAM_COLORS[i]}">${escapeHtml(t.name)}</td>
+          <td><button class="mini-btn ${results[i]==='exact'?'chosen':''}" data-r4res="${i}:exact">Exact</button></td>
+          <td><button class="mini-btn ${results[i]==='close'?'chosen':''}" data-r4res="${i}:close">Close</button></td>
+          <td><button class="mini-btn ${results[i]==='miss'?'chosen':''}" data-r4res="${i}:miss">Miss</button></td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
+function renderRound5(){
+  const r = state.r5;
+  const activeName = r.activeTeam!==null ? state.teams[r.activeTeam].name : null;
+  return `
+    <div class="eyebrow">Round 5 · Max ${CONFIG.round5.maxCorrect} questions per house</div>
+    <h2>60 Seconds Battle</h2>
+    <div class="rules"><ul>
+      <li>Captain answers rapid-fire for ${CONFIG.round5.battleTime}s. +${CONFIG.round5.correctPoints} per correct, no penalty for wrong.</li>
+      <li>All ${CONFIG.round5.maxCorrect} correct → +${CONFIG.round5.perfectBonus} bonus.</li>
+    </ul></div>
+    <p style="font-size:13px;color:var(--chalk-dim);">Select the team currently battling:</p>
+    ${teamPickHtml(r.activeTeam, 'r5team')}
+    ${timerHtml([CONFIG.round5.battleTime])}
+    ${r.activeTeam!==null ? `
+      <div class="turn-banner"><span class="dot" style="background:${TEAM_COLORS[r.activeTeam]}"></span>
+        ${escapeHtml(activeName)}: ${r.counts[r.activeTeam]||0} / ${CONFIG.round5.maxCorrect} correct
+      </div>
+      <div class="action-row">
+        <button class="btn-correct" data-r5correct="1" ${(r.counts[r.activeTeam]||0)>=CONFIG.round5.maxCorrect?'disabled':''}>Correct (+${CONFIG.round5.correctPoints})</button>
+        <button class="btn-neutral" data-r5wrongpass="1">Wrong / Pass (no change)</button>
+      </div>
+      <p style="font-size:13px;color:var(--chalk-dim);margin:14px 0 6px;">Question pool (read in order):</p>
+      ${QUESTIONS.round5.map((q,i)=>qaBlock('r5-'+i, `${i+1}. ${q.question}`, q.answer)).join('')}
+    ` : `<p style="color:var(--chalk-dim);font-size:13px;">Pick a team to begin tracking.</p>`}
+  `;
+}
+
+function renderRound6(){
+  const r = state.r6;
+  return `
+    <div class="eyebrow">Round 6 · Variable scoring</div>
+    <h2>Mystery Box</h2>
+    <div class="rules"><ul>
+      <li>6 sealed boxes, each worth its own points. Team picks a box; you reveal its question.</li>
+    </ul></div>
+    <div class="box-grid">
+      ${QUESTIONS.round6.map((b,i)=>{
+        const picked = r.boxes[i];
+        return `<div class="box-card ${picked.picked?'picked':''}">
+          <div class="qa-meta">${escapeHtml(b.label)} · ${b.points} pts</div>
+          ${picked.picked
+            ? qaBlock('r6-'+i, b.question, b.answer) + `
+               <div style="font-size:12px;color:${TEAM_COLORS[picked.team]};margin:6px 0;">Picked by ${escapeHtml(state.teams[picked.team].name)}</div>
+               <div class="action-row">
+                 <button class="btn-correct" data-r6award="${i}">Award +${b.points}</button>
+                 <button class="mini-btn" data-r6reset="${i}">Undo pick</button>
+               </div>`
+            : `<div style="font-size:12px;color:var(--chalk-dim);margin-bottom:4px;">Assign to:</div>
+               <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                 ${state.teams.map((t,ti)=>`<button class="mini-btn" data-r6pick="${i}:${ti}">${escapeHtml(t.name)}</button>`).join('')}
+               </div>`
+          }
+        </div>`;
+      }).join('')}
+    </div>
+    ${timerHtml(CONFIG.round6.timerPresets)}
+  `;
+}
+
+function renderRound7(){
+  const r = state.r7;
+  const qd = QUESTIONS.round7[r.qnum-1];
+  return `
+    <div class="eyebrow">Round 7 · Bid-based</div>
+    <h2>Math Auction (Bet or Bust)</h2>
+    <div class="rules"><ul>
+      <li>Every team gets a ×${CONFIG.round7.bonusMultiplier} bonus on their score up to Round 6.</li>
+      <li>4 auction questions: teams bid blind; highest bid wins the right to answer.</li>
+      <li>Correct → gain the bid; incorrect → lose the bid.</li>
+    </ul></div>
+    ${!r.bonusApplied ? `
+      <div class="action-row"><button class="btn-correct" data-r7bonus="1">Apply ×${CONFIG.round7.bonusMultiplier} bonus to all teams now</button></div>
+    ` : `<p style="color:var(--good);font-size:13px;">✓ Bonus already applied.</p>`}
+    <div class="field-row" style="margin-top:14px;"><label>Auction question</label>
+      <button class="mini-btn" data-r7q="-1">◀</button>
+      <b style="min-width:20px;text-align:center;display:inline-block;">${r.qnum}</b>
+      <button class="mini-btn" data-r7q="1">▶</button>
+      <span style="color:var(--chalk-dim);font-size:12px;">of 4</span>
+    </div>
+    ${qaBlock('r7-'+r.qnum, qd.question, qd.answer)}
+    <table class="score-table">
+      <tr><th>Team</th><th>Bid</th><th>Result</th></tr>
+      ${state.teams.map((t,i)=>`
+        <tr>
+          <td style="color:${TEAM_COLORS[i]}">${escapeHtml(t.name)}</td>
+          <td><input type="number" min="0" value="${r.bids[i]}" data-r7bid="${i}" style="width:70px;"></td>
+          <td>
+            <button class="mini-btn" data-r7result="${i}:win">Won bid, correct (+bid)</button>
+            <button class="mini-btn" data-r7result="${i}:lose">Won bid, wrong (−bid)</button>
+          </td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
+function renderRound8(){
+  const r = state.r8;
+  const placeLabel = ['🥇 1st','🥈 2nd','🥉 3rd','4th'];
+  return `
+    <div class="eyebrow">Round 8 · Max ${Math.max(...CONFIG.round8.placePoints)} pts</div>
+    <h2>Math Relay (Pass the Brain)</h2>
+    <div class="rules"><ul>
+      <li>4 members each solve one question in sequence; no helping teammates.</li>
+      <li>Any wrong answer in the chain → team scores 0 for the relay.</li>
+      <li>Completion order: ${CONFIG.round8.placePoints.map((p,i)=>placeLabel[i]+' +'+p).join(', ')}.</li>
+    </ul></div>
+    ${QUESTIONS.round8.map(leg => qaBlock('r8-'+leg.leg, `Leg ${leg.leg}: ${leg.question}`, leg.answer)).join('')}
+    <p style="font-size:13px;color:var(--chalk-dim);margin:10px 0 4px;">Tap teams in the order they correctly finish all 4:</p>
+    <div class="team-pick">
+      ${state.teams.map((t,i)=>{
+        const place = r.finishOrder.indexOf(i);
+        return `<button class="team-pick-btn ${place>-1?'chosen':''}" style="--tc:${TEAM_COLORS[i]}" data-r8pick="${i}">
+          ${escapeHtml(t.name)}${place>-1?`<br><small>${placeLabel[place]} (+${CONFIG.round8.placePoints[place]})</small>`:''}
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="action-row"><button class="btn-neutral" data-r8clear="1">Clear order</button></div>
+  `;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 10 — EVENT BINDING
+   Wires clicks/inputs in the freshly-rendered DOM to the functions above.
+   Runs once at the end of every render() call.
+   ══════════════════════════════════════════════════════════════════════ */
+function bindGlobalEvents(){
+  const et = document.getElementById('eventTitle');
+  if(et) et.addEventListener('blur', e=>{ state.eventTitle = e.target.textContent.trim() || 'Math Quiz'; save(); });
+
+  document.getElementById('resetBtn').addEventListener('click', resetAll);
+  const openAud = document.getElementById('openAudienceBtn');
+  if(openAud) openAud.addEventListener('click', ()=>{
+    const url = location.origin + location.pathname + '?view=audience';
+    window.open(url, '_blank');
+  });
+
+  state.teams.forEach((t,i)=>{
+    const inp = document.getElementById('teamName'+i);
+    if(inp) inp.addEventListener('change', e=>{ state.teams[i].name = e.target.value || ('House '+(i+1)); save(); render(); });
+  });
+
+  document.querySelectorAll('[data-adjust]').forEach(b=>b.addEventListener('click', e=>{
+    const [i,d] = e.target.dataset.adjust.split(':').map(Number);
+    manualAdjust(i,d);
+  }));
+  document.querySelectorAll('[data-comeback]').forEach(b=>b.addEventListener('click', e=>{
+    toggleComeback(Number(e.target.dataset.comeback));
+  }));
+  document.querySelectorAll('[data-round]').forEach(b=>b.addEventListener('click', e=>{
+    state.activeRound = Number(e.currentTarget.dataset.round);
+    setTimer(0);
+    save(); render();
+  }));
+  document.querySelectorAll('[data-reveal]').forEach(b=>b.addEventListener('click', e=>{
+    toggleReveal(e.currentTarget.dataset.reveal);
+  }));
+
+  const startBtn = document.getElementById('timerStartBtn');
+  if(startBtn) startBtn.addEventListener('click', startTimer);
+  const pauseBtn = document.getElementById('timerPauseBtn');
+  if(pauseBtn) pauseBtn.addEventListener('click', pauseTimer);
+  document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click', e=>{
+    setTimer(Number(e.target.dataset.preset));
+  }));
+
+  // Round 1
+  document.querySelectorAll('[data-r1pick]').forEach(b=>b.addEventListener('click', e=>r1Pick(Number(e.currentTarget.dataset.r1pick))));
+  document.querySelectorAll('[data-r1resolve]').forEach(b=>b.addEventListener('click', e=>r1Resolve(e.currentTarget.dataset.r1resolve==='1')));
+  document.querySelectorAll('[data-r1pass]').forEach(b=>b.addEventListener('click', e=>r1SelectPassTeam(Number(e.currentTarget.dataset.r1pass))));
+
+  // Round 2
+  document.querySelectorAll('[data-r2visual]').forEach(b=>b.addEventListener('click', e=>{
+    state.r2.visual = Math.min(QUESTIONS.round2.length, Math.max(1, state.r2.visual + Number(e.currentTarget.dataset.r2visual)));
+    save(); render();
+  }));
+  document.querySelectorAll('[data-r2score]').forEach(b=>b.addEventListener('click', e=>{
+    const [i,dir] = e.currentTarget.dataset.r2score.split(':').map(Number);
+    awardPoints(i, dir>0?CONFIG.round2.correctPoints:CONFIG.round2.incorrectPoints, `Round 2 visual ${state.r2.visual} ${dir>0?'correct':'incorrect'}`);
+  }));
+
+  // Round 3
+  document.querySelectorAll('[data-r3pick]').forEach(b=>b.addEventListener('click', e=>{
+    const i = Number(e.currentTarget.dataset.r3pick);
+    if(state.r3.finishOrder.includes(i)) return;
+    state.r3.finishOrder.push(i);
+    if(state.r3.finishOrder.length<=4){
+      const place = state.r3.finishOrder.length-1;
+      const labels=['1st','2nd','3rd','4th'];
+      awardPoints(i, CONFIG.round3.placePoints[place], `Round 3 finished ${labels[place]}`);
+    }
+  }));
+  const r3clear = document.querySelector('[data-r3clear]');
+  if(r3clear) r3clear.addEventListener('click', ()=>{ state.r3.finishOrder=[]; save(); render(); });
+
+  // Round 4
+  document.querySelectorAll('[data-r4q]').forEach(b=>b.addEventListener('click', e=>{
+    state.r4.qnum = Math.min(4, Math.max(1, state.r4.qnum + Number(e.currentTarget.dataset.r4q)));
+    save(); render();
+  }));
+  document.querySelectorAll('[data-r4res]').forEach(b=>b.addEventListener('click', e=>{
+    const [i,res] = e.currentTarget.dataset.r4res.split(':');
+    r4Record(Number(i), res);
+  }));
+
+  // Round 5
+  document.querySelectorAll('[data-r5team]').forEach(b=>b.addEventListener('click', e=>{
+    state.r5.activeTeam = Number(e.currentTarget.dataset.r5team);
+    setTimer(CONFIG.round5.battleTime);
+    save(); render();
+  }));
+  const r5c = document.querySelector('[data-r5correct]');
+  if(r5c) r5c.addEventListener('click', r5Correct);
+  const r5w = document.querySelector('[data-r5wrongpass]');
+  if(r5w) r5w.addEventListener('click', ()=>{ log(`${state.teams[state.r5.activeTeam].name}: wrong/pass in Round 5.`); save(); render(); });
+
+  // Round 6
+  document.querySelectorAll('[data-r6pick]').forEach(b=>b.addEventListener('click', e=>{
+    const [i,ti] = e.currentTarget.dataset.r6pick.split(':').map(Number);
+    state.r6.boxes[i].picked = true;
+    state.r6.boxes[i].team = ti;
+    log(`${state.teams[ti].name} picked "${QUESTIONS.round6[i].label}"`);
+    save(); render();
+  }));
+  document.querySelectorAll('[data-r6reset]').forEach(b=>b.addEventListener('click', e=>{
+    const i = Number(e.currentTarget.dataset.r6reset);
+    state.r6.boxes[i].picked = false;
+    state.r6.boxes[i].team = null;
+    save(); render();
+  }));
+  document.querySelectorAll('[data-r6award]').forEach(b=>b.addEventListener('click', e=>{
+    const i = Number(e.currentTarget.dataset.r6award);
+    const box = state.r6.boxes[i];
+    if(box.picked) awardPoints(box.team, QUESTIONS.round6[i].points, `Round 6 "${QUESTIONS.round6[i].label}"`);
+  }));
+
+  // Round 7
+  const r7b = document.querySelector('[data-r7bonus]');
+  if(r7b) r7b.addEventListener('click', ()=>{
+    state.teams.forEach(t=>{ t.score = Math.round(t.score * CONFIG.round7.bonusMultiplier); });
+    state.r7.bonusApplied = true;
+    log(`Round 7: applied ×${CONFIG.round7.bonusMultiplier} bonus to all teams.`);
+    save(); render();
+  });
+  document.querySelectorAll('[data-r7q]').forEach(b=>b.addEventListener('click', e=>{
+    state.r7.qnum = Math.min(4, Math.max(1, state.r7.qnum + Number(e.currentTarget.dataset.r7q)));
+    save(); render();
+  }));
+  document.querySelectorAll('[data-r7bid]').forEach(b=>b.addEventListener('change', e=>{
+    state.r7.bids[Number(e.target.dataset.r7bid)] = Number(e.target.value)||0; save();
+  }));
+  document.querySelectorAll('[data-r7result]').forEach(b=>b.addEventListener('click', e=>{
+    const [i,res] = e.currentTarget.dataset.r7result.split(':');
+    const bid = state.r7.bids[Number(i)];
+    if(res==='win') awardPoints(Number(i), bid, `Round 7 Q${state.r7.qnum} won bid, correct`);
+    else awardPoints(Number(i), -bid, `Round 7 Q${state.r7.qnum} won bid, incorrect`);
+  }));
+
+  // Round 8
+  document.querySelectorAll('[data-r8pick]').forEach(b=>b.addEventListener('click', e=>{
+    const i = Number(e.currentTarget.dataset.r8pick);
+    if(state.r8.finishOrder.includes(i)) return;
+    state.r8.finishOrder.push(i);
+    if(state.r8.finishOrder.length<=4){
+      const place = state.r8.finishOrder.length-1;
+      const labels=['1st','2nd','3rd','4th'];
+      awardPoints(i, CONFIG.round8.placePoints[place], `Round 8 relay finished ${labels[place]}`);
+    }
+  }));
+  const r8clear = document.querySelector('[data-r8clear]');
+  if(r8clear) r8clear.addEventListener('click', ()=>{ state.r8.finishOrder=[]; save(); render(); });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 11 — AUDIENCE DISPLAY MODE (?view=audience)
+   A completely separate, read-only render path in the SAME file. Live
+   sync comes from a Firebase Realtime Database listener (push-based —
+   updates the instant the control center writes, no polling needed).
+   It never writes to Firebase and never touches CONFIG/QUESTIONS answers.
+   ══════════════════════════════════════════════════════════════════════ */
+let audSnapshot = null;
+
+function audLiveTimerSeconds(t){
+  if(!t) return 0;
+  if(t.running && t.startedAt){
+    const elapsed = Math.floor((Date.now() - t.startedAt)/1000);
+    return Math.max(0, t.seconds - elapsed);
+  }
+  return t.seconds || 0;
+}
+
+function audRender(){
+  const app = document.getElementById('app');
+  if(!FIREBASE_READY){
+    app.innerHTML = `<div class="aud-wrap"><div class="aud-status-line">Firebase isn't configured yet — paste your project's config into FIREBASE_CONFIG near the top of the script, then reload.</div></div>`;
+    return;
+  }
+  if(!audSnapshot){
+    app.innerHTML = `<div class="aud-wrap"><div class="aud-status-line">Waiting for the quizmaster to start the event…</div></div>`;
+    return;
+  }
+  const s = audSnapshot;
+  const secs = audLiveTimerSeconds(s.timer);
+  app.innerHTML = `
+    <div class="aud-wrap">
+      <div class="eyebrow">${escapeHtml(s.eventTitle)}</div>
+      <div class="aud-scoreboard">
+        ${s.teams.map((t,i)=>`
+          <div class="aud-team-card" style="--tc:${TEAM_COLORS[i]}">
+            <div class="aud-team-name">${escapeHtml(t.name)}</div>
+            <div class="aud-team-score">${t.score}</div>
+            ${t.comeback==='active' ? '<div class="aud-comeback-tag active">Comeback active</div>' : ''}
+            ${t.comeback==='used' ? '<div class="aud-comeback-tag used">Comeback used</div>' : ''}
+          </div>
+        `).join('')}
+      </div>
+      <div class="aud-stage">
+        <div class="aud-stage-head">
+          <h2 class="aud-round-title">Round ${s.activeRound} · ${escapeHtml(s.roundName)}</h2>
+          <div class="aud-timer ${secs<=10 && secs>0 ? 'low':''}">${fmtTime(secs)}</div>
+        </div>
+        <div class="aud-stage-body">${audRenderContent(s)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function audRenderContent(s){
+  const c = s.content;
+  if(!c) return `<div class="aud-status-line">Get ready…</div>`;
+  switch(s.activeRound){
+    case 1: {
+      let top = `<div class="aud-turn-line"><span class="aud-dot" style="background:${TEAM_COLORS[c.selectingTeam]}"></span>On turn: ${escapeHtml(s.teams[c.selectingTeam].name)}</div>`;
+      if(c.phase==='pass-select'){
+        top += `<div class="aud-subtle">Question passed — choosing next team…</div>`;
+      } else if(c.questionText){
+        top += `<div class="aud-question-text">${escapeHtml(c.questionText)}</div>`;
+      }
+      const grid = `<div class="aud-qgrid">${c.grid.map((st,i)=>`<div class="aud-qcell ${st==='closed'?'closed':''} ${st==='active'?'active':''}">${i+1}</div>`).join('')}</div>`;
+      return top + grid;
+    }
+    case 2: {
+      return `
+        <div class="aud-subtle">Visual ${c.visual} of ${c.of} — ${escapeHtml(c.title)}</div>
+        ${c.image ? `<div class="aud-visual-frame"><img src="${escapeHtml(c.image)}"></div>` : `<div class="aud-status-line">No image set for this visual.</div>`}
+        <div class="aud-list">${c.questions.map((q,i)=>`<div>${i+1}. ${escapeHtml(q)}</div>`).join('')}</div>
+      `;
+    }
+    case 3: {
+      return `<div class="aud-list">${c.levels.map(l=>`<div><b>Level ${l.level}:</b> ${escapeHtml(l.question)}</div>`).join('')}</div>`;
+    }
+    case 4: {
+      return `<div class="aud-question-text">Numbers: <b>${c.numbers.join(', ')}</b><br>Target: <b>${c.target}</b></div>`;
+    }
+    case 5: {
+      return c.activeTeam!==null
+        ? `<div class="aud-turn-line"><span class="aud-dot" style="background:${TEAM_COLORS[c.activeTeam]}"></span>${escapeHtml(s.teams[c.activeTeam].name)} is battling</div>
+           <div class="aud-question-text">${c.count} / ${c.max} correct</div>`
+        : `<div class="aud-status-line">Waiting for a team to start their 60 seconds…</div>`;
+    }
+    case 6: {
+      return `<div class="aud-box-grid">${c.boxes.map(b=>`
+        <div class="aud-box-card ${b.picked?'picked':''}">
+          <div class="aud-box-label">${escapeHtml(b.label)}</div>
+          <div class="aud-box-points">${b.points} pts</div>
+          ${b.picked ? `<div class="aud-subtle" style="margin-top:8px;color:${TEAM_COLORS[b.team]}">${escapeHtml(s.teams[b.team].name)}</div>
+                        <div class="aud-question-text" style="font-size:16px;padding:8px;">${escapeHtml(b.question||'')}</div>` : ''}
+        </div>
+      `).join('')}</div>`;
+    }
+    case 7: {
+      return `
+        <div class="aud-question-text">${escapeHtml(c.question)}</div>
+        <div class="aud-scoreboard">
+          ${s.teams.map((t,i)=>`<div class="aud-box-card"><div class="aud-box-label" style="color:${TEAM_COLORS[i]}">${escapeHtml(t.name)}</div><div class="aud-box-points">Bid: ${c.bids[i]}</div></div>`).join('')}
+        </div>
+      `;
+    }
+    case 8: {
+      return `<div class="aud-list">${c.legs.map(l=>`<div><b>Leg ${l.leg}:</b> ${escapeHtml(l.question)}</div>`).join('')}</div>`;
+    }
+    default: return '';
+  }
+}
+
+function bootAudienceMode(){
+  if(!FIREBASE_READY){ audRender(); return; }
+  db.ref(PUBLIC_KEY).on('value', snap=>{
+    audSnapshot = snap.val();
+    audRender();
+  });
+  // smooth the on-screen timer between real Firebase updates
+  setInterval(()=>{ if(audSnapshot) audRender(); }, 1000);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION 12 — BOOT
+   Picks which of the two apps above actually runs, based on the URL.
+   Open the file normally for the control center; open it with
+   ?view=audience appended (the topbar button does this for you) for
+   the read-only projector view.
+   ══════════════════════════════════════════════════════════════════════ */
+const AUDIENCE_MODE = new URLSearchParams(location.search).get('view') === 'audience';
+if(AUDIENCE_MODE){
+  bootAudienceMode();
+} else {
+  load();
+}
+</script>
+</body>
+</html>
