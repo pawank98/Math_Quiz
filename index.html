@@ -191,7 +191,6 @@ table.score-table th{color:var(--chalk-dim);font-family:'JetBrains Mono',monospa
 <div class="wrap" id="app"></div>
 
 <script>
-  
 /* ══════════════════════════════════════════════════════════════════════
    SECTION 1 — CONFIG
    Every number that controls scoring or timers lives here. Change values
@@ -369,13 +368,13 @@ const QUESTIONS = {
    live across two real devices/tabs over the internet.
    ══════════════════════════════════════════════════════════════════════ */
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyD7TBu_OYdFPfCbYtJC0hZkz5X2a8WYLHA",
-  authDomain: "quiz-e238c.firebaseapp.com",
-  databaseURL: "https://quiz-e238c-default-rtdb.asia-southeast1.firebasedatabase.app/",
-  projectId: "quiz-e238c",
-  storageBucket: "quiz-e238c.firebasestorage.app",
-  messagingSenderId: "44882000613",
-  appId: "1:44882000613:web:03769182aa6612e759320c"
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "PASTE_YOUR_PROJECT",
+  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId: "PASTE_YOUR_APP_ID"
 };
 const FIREBASE_READY = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('PASTE_');
 let db = null;
@@ -1383,10 +1382,15 @@ function audRenderContent(s){
 }
 
 function bootAudienceMode(){
-  if(!FIREBASE_READY){ audRender(); return; }
+  audRender(); // paint immediately (shows the "waiting" placeholder) instead of a blank screen
+  if(!FIREBASE_READY) return;
   db.ref(PUBLIC_KEY).on('value', snap=>{
     audSnapshot = snap.val();
     audRender();
+  }, err=>{
+    console.error('Firebase read failed:', err);
+    document.getElementById('app').innerHTML =
+      `<div class="aud-wrap"><div class="aud-status-line">Couldn't connect to Firebase: ${err.message||err}<br><br>Check your Realtime Database Rules allow read access, and that databaseURL is correct.</div></div>`;
   });
   // smooth the on-screen timer between real Firebase updates
   setInterval(()=>{ if(audSnapshot) audRender(); }, 1000);
