@@ -148,11 +148,13 @@ table.score-table th{color:var(--chalk-dim);font-family:'JetBrains Mono',monospa
   .qgrid{grid-template-columns:repeat(4,1fr);}
   .box-grid{grid-template-columns:repeat(1,1fr);}
   .team-pick{grid-template-columns:repeat(2,1fr);}
+  .aud-stage-head{flex-direction:column;align-items:center;text-align:center;}
+  .aud-scoreboard{grid-template-columns:repeat(2,1fr);}
 }
 
 /* ===== Audience Display mode (?view=audience) — separate "aud-" prefixed
    classes so they never collide with the control-center styles above ===== */
-.aud-wrap{display:flex;flex-direction:column;height:100vh;padding:24px;gap:20px;overflow:hidden;}
+.aud-wrap{display:flex;flex-direction:column;min-height:100vh;padding:24px;gap:20px;overflow-y:auto;}
 .aud-scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
 .aud-team-card{background:var(--bg-panel);border-radius:14px;padding:16px 18px;border-top:6px solid var(--tc);text-align:center;}
 .aud-team-name{font-family:'Oswald',sans-serif;font-size:clamp(16px,2vw,22px);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}
@@ -161,9 +163,9 @@ table.score-table th{color:var(--chalk-dim);font-family:'JetBrains Mono',monospa
 .aud-comeback-tag.active{background:var(--accent);color:#241c07;font-weight:700;}
 .aud-comeback-tag.used{color:var(--chalk-dim);border:1px solid var(--line);}
 .aud-stage{flex:1;background:var(--bg-panel);border:1px solid var(--line);border-radius:20px;padding:30px 40px;display:flex;flex-direction:column;min-height:0;}
-.aud-stage-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:14px;}
+.aud-stage-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:14px;}
 .aud-round-title{font-size:clamp(24px,3.4vw,40px);font-family:'Oswald',sans-serif;}
-.aud-timer{font-family:'JetBrains Mono',monospace;font-size:clamp(40px,6vw,80px);font-weight:700;background:#0F1C17;border:1px solid var(--line);border-radius:14px;padding:6px 30px;color:var(--accent);}
+.aud-timer{font-family:'JetBrains Mono',monospace;font-size:clamp(32px,4.5vw,60px);font-weight:700;background:#0F1C17;border:1px solid var(--line);border-radius:14px;padding:6px 24px;color:var(--accent);flex:0 0 auto;}
 .aud-timer.low{color:var(--bad);}
 .aud-stage-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;justify-content:center;}
 .aud-question-text{font-size:clamp(22px,3vw,38px);line-height:1.4;text-align:center;padding:20px;}
@@ -225,7 +227,7 @@ const QUESTIONS = {
   // Example:
   //   { question: "What is 15% of 200?", answer: "30" }
   round1: [
-    { question: "Q1: What is 15% of 200?", answer: "30" },
+    { question: "Q1: Sample question — replace me", answer: "Sample answer" },
     { question: "Q2: Sample question — replace me", answer: "Sample answer" },
     { question: "Q3: Sample question — replace me", answer: "Sample answer" },
     { question: "Q4: Sample question — replace me", answer: "Sample answer" },
@@ -368,13 +370,13 @@ const QUESTIONS = {
    live across two real devices/tabs over the internet.
    ══════════════════════════════════════════════════════════════════════ */
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyD7TBu_OYdFPfCbYtJC0hZkz5X2a8WYLHA",
-  authDomain: "quiz-e238c.firebaseapp.com",
-  databaseURL: "https://quiz-e238c-default-rtdb.asia-southeast1.firebasedatabase.app/",
-  projectId: "quiz-e238c",
-  storageBucket: "quiz-e238c.firebasestorage.app",
-  messagingSenderId: "44882000613",
-  appId: "1:44882000613:web:03769182aa6612e759320c"
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "PASTE_YOUR_PROJECT",
+  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId: "PASTE_YOUR_APP_ID"
 };
 const FIREBASE_READY = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('PASTE_');
 let db = null;
